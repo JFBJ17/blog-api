@@ -12,3 +12,4 @@ export interface User {
 
 export type AddUser = Omit<User, '_id' | 'createdAt' | 'updatedAt'>
 export type CreateToken = Omit<User, 'createdAt' | 'updatedAt' | 'password'>
+export type Login = Pick<User, 'email' | 'password'>

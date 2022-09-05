@@ -10,18 +10,23 @@ import { typeDefs } from './gql/typeDefs'
 import { resolvers } from './gql/resolvers'
 import { DocumentNode } from 'graphql'
 import { connectDB } from './db/connect'
+import { authenticate } from './middlewares/auth'
 
 const port = process.env.PORT || 4000
 
 async function startApolloServer (typeDefs: DocumentNode, resolvers: {}) {
   connectDB()
   const app = express()
+  app.use(authenticate)
   const httpServer = http.createServer(app)
   const server = new ApolloServer({
     typeDefs,
     resolvers,
     csrfPrevention: true,
     cache: 'bounded',
+    context: ({ req }) => {
+      return req
+    },
     plugins: [
       ApolloServerPluginDrainHttpServer({ httpServer }),
       ApolloServerPluginLandingPageLocalDefault({ embed: true })
