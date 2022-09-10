@@ -1,9 +1,10 @@
-import { CreatePost, Post } from '../interfaces/post'
-import { AddUser, CreateToken, Login } from '../interfaces/user'
+import { AddComment, Comment } from '../interfaces/comment'
+import { CreatePost, Post, UpdatePost } from '../interfaces/post'
+import { AddUser, CreateToken, Login, User } from '../interfaces/user'
 import { models } from '../models'
 import { createJWToken } from '../util/auth'
 
-const { userModel, postModel } = models
+const { userModel, postModel, commentModel } = models
 
 export const resolvers = {
   Query: {
@@ -15,7 +16,7 @@ export const resolvers = {
         throw new Error(error as string)
       }
     },
-    oneUser: async (_: unknown, args: { _id: string }) => {
+    oneUser: async (_: unknown, args: Pick<User, '_id'>) => {
       try {
         const user = await userModel.findById(args._id)
         return user
@@ -29,6 +30,10 @@ export const resolvers = {
       } catch (error) {
         throw new Error(error as string)
       }
+    },
+    onePost: async (_: unknown, args: Pick<Post, '_id'>) => {
+      const post = await postModel.findById(args._id)
+      return post
     }
   },
   Mutation: {
@@ -82,12 +87,89 @@ export const resolvers = {
       } catch (error) {
         throw new Error(error as string)
       }
+    },
+    updatePost: async (
+      _: unknown,
+      args: UpdatePost,
+      ctx: { verifiedUser: CreateToken }
+    ) => {
+      const { _id, body, title } = args
+      try {
+        if (!ctx.verifiedUser) throw new Error('Unauthorized')
+        const updatedPost = await postModel.findOneAndUpdate(
+          { _id, authorId: ctx.verifiedUser._id },
+          { title, body },
+          { new: true, runValidators: true }
+        )
+        return updatedPost
+      } catch (error) {
+        throw new Error(error as string)
+      }
+    },
+    deletePost: async (
+      _: unknown,
+      args: Pick<Post, '_id'>,
+      ctx: { verifiedUser: CreateToken }
+    ) => {
+      const { _id } = args
+      try {
+        if (!ctx.verifiedUser) throw new Error('Unauthorized')
+        const deletedPost = await postModel.findByIdAndDelete({
+          _id,
+          authorId: ctx.verifiedUser._id
+        })
+        if (!deletedPost) throw new Error('Post not found')
+        return 'Deleted post'
+      } catch (error) {
+        throw new Error(error as string)
+      }
+    },
+    addComment: async (
+      _: unknown,
+      args: AddComment,
+      ctx: { verifiedUser: CreateToken }
+    ) => {
+      const { comment, postId } = args
+      try {
+        const newComment = new commentModel({
+          comment,
+          postId,
+          userId: ctx.verifiedUser._id
+        })
+        return await newComment.save()
+      } catch (error) {
+        throw new Error(error as string)
+      }
     }
   },
+  // SUBQUERIES
   Post: {
     author: async (parent: Post) => {
       try {
-        return userModel.findById(parent.authorId)
+        return await userModel.findById(parent.authorId)
+      } catch (error) {
+        throw new Error(error as string)
+      }
+    },
+    comments: async (parent: Post) => {
+      try {
+        return await commentModel.find({ postId: parent._id })
+      } catch (error) {
+        throw new Error(error as string)
+      }
+    }
+  },
+  Comment: {
+    user: async (parent: Comment) => {
+      try {
+        return await userModel.findById(parent.userId)
+      } catch (error) {
+        throw new Error(error as string)
+      }
+    },
+    post: async (parent: Comment) => {
+      try {
+        return await postModel.findById(parent.postId)
       } catch (error) {
         throw new Error(error as string)
       }
