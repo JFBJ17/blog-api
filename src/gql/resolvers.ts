@@ -34,6 +34,20 @@ export const resolvers = {
     onePost: async (_: unknown, args: Pick<Post, '_id'>) => {
       const post = await postModel.findById(args._id)
       return post
+    },
+    allComment: async () => {
+      try {
+        return await commentModel.find()
+      } catch (error) {
+        throw new Error(error as string)
+      }
+    },
+    oneComment: async (_: unknown, args: Pick<Comment, '_id'>) => {
+      try {
+        return await commentModel.findById(args._id)
+      } catch (error) {
+        throw new Error(error as string)
+      }
     }
   },
   Mutation: {
@@ -137,6 +151,43 @@ export const resolvers = {
           userId: ctx.verifiedUser._id
         })
         return await newComment.save()
+      } catch (error) {
+        throw new Error(error as string)
+      }
+    },
+    updateComment: async (
+      _: unknown,
+      args: Pick<Comment, '_id' | 'comment'>,
+      ctx: { verifiedUser: CreateToken }
+    ) => {
+      const { _id, comment } = args
+      try {
+        if (!ctx.verifiedUser) throw new Error('Unauthorized')
+        const updateComment = await commentModel.findOneAndUpdate(
+          { _id, userId: ctx.verifiedUser._id },
+          { comment },
+          { new: true, runValidators: true }
+        )
+        if (!updateComment) throw new Error('Comment not found')
+        return updateComment
+      } catch (error) {
+        throw new Error(error as string)
+      }
+    },
+    deleteComment: async (
+      _: unknown,
+      args: Pick<Comment, '_id'>,
+      ctx: { verifiedUser: CreateToken }
+    ) => {
+      const { _id } = args
+      try {
+        if (!ctx.verifiedUser) throw new Error('Unauthorized')
+        const deleteComment = await commentModel.findOneAndDelete({
+          _id,
+          userId: ctx.verifiedUser._id
+        })
+        if (!deleteComment) throw new Error('Comment not found')
+        return 'Comment deleted'
       } catch (error) {
         throw new Error(error as string)
       }

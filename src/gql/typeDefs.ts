@@ -37,6 +37,8 @@ export const typeDefs = gql`
     oneUser(_id: ID!): User
     allPosts: [Post]
     onePost(_id: ID!): Post
+    allComment: [Comment]
+    oneComment(_id: ID!): Comment
   }
 
   type Mutation {
@@ -46,5 +48,7 @@ export const typeDefs = gql`
     updatePost(_id: ID!, title: String!, body: String): Post
     deletePost(_id: ID!): String
     addComment(comment: String!, postId: ID!): Comment
+    updateComment(_id: ID!, comment: String!): Comment
+    deleteComment(_id: ID!): String
   }
 `
